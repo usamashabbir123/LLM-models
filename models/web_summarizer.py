@@ -14,7 +14,15 @@ import requests
 from bs4 import BeautifulSoup
 from typing import Optional
 
-from models.ollama_basic import ask
+from typing import Optional, Callable
+
+def _get_ask(provider: str) -> Callable[[str, Optional[str], Optional[str]], str]:
+    if (provider or "").lower() == "openai":
+        from models.openai_basic import ask  # lazy import
+        return ask
+    # default to ollama
+    from models.ollama_basic import ask  # type: ignore
+    return ask
 
 
 def _fetch_and_clean(url: str, *, timeout: int = 15) -> str:
@@ -36,12 +44,26 @@ def _build_prompt(content: str) -> str:
     )
 
 
-def summarize_url(url: str, *, model: Optional[str] = None, host: Optional[str] = None) -> str:
+def summarize_url(
+    url: str,
+    *,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    host: Optional[str] = None,
+) -> str:
     content = _fetch_and_clean(url)
     prompt = _build_prompt(content)
-    return ask(prompt, model=model, host=host)
+    ask_fn = _get_ask(provider or "ollama")
+    return ask_fn(prompt, model=model, host=host)
 
 
-def summarize_text(text: str, *, model: Optional[str] = None, host: Optional[str] = None) -> str:
+def summarize_text(
+    text: str,
+    *,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    host: Optional[str] = None,
+) -> str:
     prompt = _build_prompt(text)
-    return ask(prompt, model=model, host=host)
+    ask_fn = _get_ask(provider or "ollama")
+    return ask_fn(prompt, model=model, host=host)
