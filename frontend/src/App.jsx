@@ -5,6 +5,8 @@ const API_BASE = import.meta?.env?.VITE_API_BASE || 'http://localhost:8000'
 export default function App() {
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
+  const [provider, setProvider] = useState('ollama')
+  const [model, setModel] = useState('llama3.2:latest')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [summary, setSummary] = useState('')
@@ -32,6 +34,8 @@ export default function App() {
 
     try {
       const payload = url ? { url } : { text }
+      payload.provider = provider
+      payload.model = model
       const res = await fetch(`${API_BASE}/api/summarize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,6 +73,37 @@ export default function App() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="row g-3 mb-2">
+                <div className="col-12 col-md-6">
+                  <label className="form-label">Provider</label>
+                  <select className="form-select" value={provider} onChange={(e) => {
+                    const next = e.target.value
+                    setProvider(next)
+                    if (next === 'ollama' && (model === '' || model.startsWith('gpt'))) {
+                      setModel('llama3.2:latest')
+                    }
+                    if (next === 'openai' && (model === '' || model.includes('llama'))) {
+                      setModel('gpt-4o-mini')
+                    }
+                  }}>
+                    <option value="ollama">Ollama (local, default)</option>
+                    <option value="openai">OpenAI (cloud)</option>
+                  </select>
+                </div>
+                <div className="col-12 col-md-6">
+                  <label className="form-label">Model</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    placeholder={provider === 'openai' ? 'e.g., gpt-4o-mini' : 'e.g., llama3.2:latest'}
+                  />
+                  <div className="form-text">
+                    {provider === 'openai' ? 'Requires OPENAI_API_KEY on server.' : 'Runs via local Ollama.'}
+                  </div>
+                </div>
+              </div>
               <div className="mb-3">
                 <label className="form-label">Website URL</label>
                 <input
@@ -96,7 +131,7 @@ export default function App() {
                 <button type="submit" className="btn btn-primary px-4 shadow-sm" disabled={loading || (!url && !text)}>
                   {loading ? 'Summarizing…' : 'Summarize'}
                 </button>
-                <button type="button" className="btn btn-outline-secondary" onClick={() => { setUrl(''); setText(''); setSummary(''); setError(''); setElapsedMs(0) }} disabled={loading}>
+                <button type="button" className="btn btn-outline-secondary" onClick={() => { setUrl(''); setText(''); setSummary(''); setError(''); setElapsedMs(0); setProvider('ollama'); setModel('llama3.2:latest') }} disabled={loading}>
                   Clear
                 </button>
                 <div className="text-slate-600 ms-sm-2 mt-2 mt-sm-0">
